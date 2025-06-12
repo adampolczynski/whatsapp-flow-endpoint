@@ -1,4 +1,4 @@
-import express, { Request } from "express";
+import express, { Request, Router } from "express";
 import {
   decryptRequest,
   encryptResponse,
@@ -9,6 +9,7 @@ import crypto from "crypto";
 import serverless from "serverless-http";
 
 const app = express();
+const router = Router();
 
 app.use(
   express.json({
@@ -30,7 +31,7 @@ MIIE...
 -----[REPLACE THIS] END RSA PRIVATE KEY-----```
 */
 
-app.post("/", async (req, res) => {
+router.post("/", async (req, res) => {
   if (!PRIVATE_KEY) {
     throw new Error(
       'Private key is empty. Please check your env variable "PRIVATE_KEY".'
@@ -80,13 +81,9 @@ app.post("/", async (req, res) => {
   res.send(encryptResponse(screenResponse, aesKeyBuffer, initialVectorBuffer));
 });
 
-app.get("/", (req, res) => {
+router.get("/", (req, res) => {
   res.send(`<pre>Nothing to see here.
 Checkout README.md to start.</pre>`);
-});
-
-app.listen(() => {
-  console.log(`Server is listening on port: ${PORT}`);
 });
 
 function isRequestSignatureValid(req: Request) {
@@ -113,5 +110,7 @@ function isRequestSignatureValid(req: Request) {
   }
   return true;
 }
+
+app.use("/api/", router);
 
 export const handler = serverless(app);
