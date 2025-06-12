@@ -6,6 +6,7 @@ import {
 } from "../lib/encryption.js";
 import { getNextScreen } from "../lib/flow.js";
 import crypto from "crypto";
+import serverless from "serverless-http";
 
 const app = express();
 
@@ -112,3 +113,5 @@ function isRequestSignatureValid(req: Request) {
   }
   return true;
 }
+
+export const handler = serverless(app);
