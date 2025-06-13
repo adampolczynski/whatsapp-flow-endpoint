@@ -4,7 +4,15 @@ import serverless from "serverless-http";
 
 const app = express();
 const router = Router();
-app.use(express.json());
+
+app.use(
+  express.json({
+    // store the raw request body to use it for signature verification
+    verify: (req, res, buf, encoding) => {
+      req.rawBody = buf?.toString(encoding || "utf8");
+    },
+  })
+);
 
 const PRIVATE_KEY_BASE_64 = process.env.PRIVATE_KEY as string;
 const PRIVATE_KEY = Buffer.from(PRIVATE_KEY_BASE_64, "base64").toString(
@@ -12,6 +20,7 @@ const PRIVATE_KEY = Buffer.from(PRIVATE_KEY_BASE_64, "base64").toString(
 );
 
 router.post("/", async (req, res) => {
+  console.warn(req.body);
   const { decryptedBody, aesKeyBuffer, initialVectorBuffer } = decryptRequest(
     req.body,
     PRIVATE_KEY
