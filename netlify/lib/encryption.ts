@@ -9,6 +9,7 @@ import crypto from "crypto";
 export const decryptRequest = (body: any, privatePem: string) => {
   const { encrypted_aes_key, encrypted_flow_data, initial_vector } = body;
 
+  console.log(process.env.PASSPHRASE, privatePem);
   // Decrypt the AES key created by the client
   const decryptedAesKey = crypto.privateDecrypt(
     {
