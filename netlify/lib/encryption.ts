@@ -6,21 +6,42 @@
  */
 
 import crypto from "crypto";
+
 export const decryptRequest = (body: any, privatePem: string) => {
   const { encrypted_aes_key, encrypted_flow_data, initial_vector } = body;
 
-  console.log(process.env.PASSPHRASE, privatePem);
-  // Decrypt the AES key created by the client
-  const decryptedAesKey = crypto.privateDecrypt(
-    {
-      key: crypto.createPrivateKey(privatePem),
-      padding: crypto.constants.RSA_PKCS1_OAEP_PADDING,
-      oaepHash: "sha256",
-      passphrase: process.env.PASSPHRASE,
-    },
-    Buffer.from(encrypted_aes_key, "base64")
-  );
+  const privateKey = crypto.createPrivateKey({
+    key: privatePem,
+    passphrase: process.env.PASSPHRASE,
+  });
 
+  console.log(process.env.PASSPHRASE, privatePem, {
+    encrypted_aes_key,
+    encrypted_flow_data,
+    initial_vector,
+  });
+
+  let decryptedAesKey = null;
+  try {
+    // decrypt AES key created by client
+    decryptedAesKey = crypto.privateDecrypt(
+      {
+        key: privateKey,
+        padding: crypto.constants.RSA_PKCS1_OAEP_PADDING,
+        oaepHash: "sha256",
+      },
+      Buffer.from(encrypted_aes_key, "base64")
+    );
+  } catch (error) {
+    console.error(error);
+    /*
+    Failed to decrypt. Please verify your private key.
+    If you change your public key. You need to return HTTP status code 421 to refresh the public key on the client
+    */
+    throw new Error(
+      "Failed to decrypt the request. Please verify your private key."
+    );
+  }
   // Decrypt the Flow data
   const flowDataBuffer = Buffer.from(encrypted_flow_data, "base64");
   const initialVectorBuffer = Buffer.from(initial_vector, "base64");
