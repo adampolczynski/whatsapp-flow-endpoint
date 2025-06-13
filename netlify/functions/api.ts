@@ -41,7 +41,23 @@ router.post("/", async (req, res) => {
   switch (screen) {
     case "SIGN_IN":
       receivedData = data as SignInFlowData;
-      const { data: loginRes } = await login(data.phone, data.pin);
+      let loginRes;
+      try {
+        ({ data: loginRes } = await login(
+          receivedData.phone,
+          receivedData.pin
+        ));
+
+        const graphlRes = await graphql(loginRes.jwt);
+        console.warn("graphqlres: ", graphlRes);
+      } catch (e) {
+        return res.json({
+          action: "ERROR",
+          data: {
+            message: JSON.stringify(e?.response?.data || "error"),
+          },
+        });
+      }
       const { jwt, user } = loginRes;
       return res.json({
         action: "CONTINUE",
@@ -58,13 +74,23 @@ router.post("/", async (req, res) => {
       break;
     case "SIGN_UP":
       receivedData = data as SignUpFlowData;
-      const { data: registerRes } = await register(
-        data.first_name,
-        data.last_name,
-        data.phone,
-        data.pin,
-        data.referral_code
-      );
+      let registerRes;
+      try {
+        ({ data: registerRes } = await register(
+          receivedData.first_name,
+          receivedData.last_name,
+          receivedData.phone,
+          receivedData.pin,
+          receivedData.referral_code
+        ));
+      } catch (e) {
+        return res.json({
+          action: "ERROR",
+          data: {
+            message: JSON.stringify(e?.response?.data || "error"),
+          },
+        });
+      }
       const { user: regUser } = registerRes;
       return res.json({
         screen: "VERIFY_OTP",
@@ -142,6 +168,35 @@ const register = async (
       password: pin,
       referralCode,
     });
+  } catch (error) {
+    console.warn(error?.response?.data || error);
+    return Promise.reject(error);
+  }
+};
+
+const graphql = async (jwt: string): Promise<AxiosResponse<{ user: any }>> => {
+  try {
+    return await axios.post(
+      process.env.API_URL + "/graphql",
+      {
+        query: `
+      query PostsForAuthor {
+        author(id: 1) {
+          firstName
+            posts {
+              title
+              votes
+            }
+          }
+        }
+      `,
+      },
+      {
+        headers: {
+          Authorization: `Bearer ${jwt}`,
+        },
+      }
+    );
   } catch (error) {
     console.warn(error?.response?.data || error);
     return Promise.reject(error);
