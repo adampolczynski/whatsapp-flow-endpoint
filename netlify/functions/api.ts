@@ -50,15 +50,13 @@ router.post("/", async (req, res) => {
     action,
   });
   // Return the next screen & data to the client
-  const screenData = {
-    screen: "SCREEN_NAME",
+  const resData = {
     data: {
-      some_key: "some_value",
+      status: "active",
     },
   };
 
-  // Return the response as plaintext
-  res.send(encryptResponse(screenData, aesKeyBuffer, initialVectorBuffer));
+  res.send(encryptResponse(resData, aesKeyBuffer, initialVectorBuffer));
 });
 
 router.get("/", (req, res) => {
