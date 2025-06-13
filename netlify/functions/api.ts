@@ -6,9 +6,10 @@ const app = express();
 const router = Router();
 app.use(express.json());
 
-const PRIVATE_KEY = (process.env.PRIVATE_KEY as string)
-  ?.split(String.raw`\n`)
-  ?.join("\n");
+const PRIVATE_KEY_BASE_64 = process.env.PRIVATE_KEY as string;
+const PRIVATE_KEY = Buffer.from(PRIVATE_KEY_BASE_64, "base64").toString(
+  "ascii"
+);
 
 router.post("/", async (req, res) => {
   const { decryptedBody, aesKeyBuffer, initialVectorBuffer } = decryptRequest(
