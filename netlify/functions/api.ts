@@ -35,12 +35,7 @@ router.post("/", async (req, res) => {
 
   const { screen, data, version, action } = decryptedBody;
 
-  console.warn("{ screen, data, version, action }", {
-    screen,
-    data,
-    version,
-    action,
-  });
+  console.warn("decryptedBody", decryptedBody);
 
   let receivedData = {} as Record<string, any>;
   switch (screen) {
@@ -127,6 +122,7 @@ const login = async (
       password: pin,
     });
   } catch (error) {
+    console.warn(error?.response?.data || error);
     return Promise.reject(error);
   }
 };
@@ -147,6 +143,7 @@ const register = async (
       referralCode,
     });
   } catch (error) {
+    console.warn(error?.response?.data || error);
     return Promise.reject(error);
   }
 };
