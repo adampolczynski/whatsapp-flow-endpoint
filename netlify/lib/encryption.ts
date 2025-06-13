@@ -15,6 +15,7 @@ export const decryptRequest = (body: any, privatePem: string) => {
       key: crypto.createPrivateKey(privatePem),
       padding: crypto.constants.RSA_PKCS1_OAEP_PADDING,
       oaepHash: "sha256",
+      passphrase: process.env.PASSPHRASE,
     },
     Buffer.from(encrypted_aes_key, "base64")
   );
