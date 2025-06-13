@@ -6,44 +6,20 @@
  */
 
 import crypto from "crypto";
-import { Response } from "express";
-
-export const decryptRequest = (
-  body: {
-    encrypted_aes_key: string;
-    encrypted_flow_data: string;
-    initial_vector: string;
-  },
-  privatePem: string,
-  passphrase: string
-) => {
+export const decryptRequest = (body: any, privatePem: string) => {
   const { encrypted_aes_key, encrypted_flow_data, initial_vector } = body;
 
-  const privateKey = crypto.createPrivateKey({ key: privatePem, passphrase });
-  let decryptedAesKey = null;
-  try {
-    // decrypt AES key created by client
-    decryptedAesKey = crypto.privateDecrypt(
-      {
-        key: privateKey,
-        padding: crypto.constants.RSA_PKCS1_OAEP_PADDING,
-        oaepHash: "sha256",
-      },
-      Buffer.from(encrypted_aes_key, "base64")
-    );
-  } catch (error) {
-    console.error(error);
-    /*
-    Failed to decrypt. Please verify your private key.
-    If you change your public key. You need to return HTTP status code 421 to refresh the public key on the client
-    */
-    throw new FlowEndpointException(
-      421,
-      "Failed to decrypt the request. Please verify your private key."
-    );
-  }
+  // Decrypt the AES key created by the client
+  const decryptedAesKey = crypto.privateDecrypt(
+    {
+      key: crypto.createPrivateKey(privatePem),
+      padding: crypto.constants.RSA_PKCS1_OAEP_PADDING,
+      oaepHash: "sha256",
+    },
+    Buffer.from(encrypted_aes_key, "base64")
+  );
 
-  // decrypt flow data
+  // Decrypt the Flow data
   const flowDataBuffer = Buffer.from(encrypted_flow_data, "base64");
   const initialVectorBuffer = Buffer.from(initial_vector, "base64");
 
@@ -71,17 +47,16 @@ export const decryptRequest = (
 };
 
 export const encryptResponse = (
-  response: Response,
+  response: any,
   aesKeyBuffer: Buffer,
   initialVectorBuffer: Buffer
 ) => {
-  // flip initial vector
+  // Flip the initialization vector
   const flipped_iv = [];
   for (const pair of initialVectorBuffer.entries()) {
     flipped_iv.push(~pair[1]);
   }
-
-  // encrypt response data
+  // Encrypt the response data
   const cipher = crypto.createCipheriv(
     "aes-128-gcm",
     aesKeyBuffer,
@@ -92,14 +67,4 @@ export const encryptResponse = (
     cipher.final(),
     cipher.getAuthTag(),
   ]).toString("base64");
-};
-
-export const FlowEndpointException = class FlowEndpointException extends Error {
-  statusCode: number;
-  constructor(statusCode: number, message: string) {
-    super(message);
-
-    this.name = this.constructor.name;
-    this.statusCode = statusCode;
-  }
 };

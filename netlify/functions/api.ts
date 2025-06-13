@@ -1,115 +1,42 @@
 import express, { Request, Router } from "express";
-import {
-  decryptRequest,
-  encryptResponse,
-  FlowEndpointException,
-} from "../lib/encryption.js";
-import { getNextScreen } from "../lib/flow.js";
-import crypto from "crypto";
+import { decryptRequest, encryptResponse } from "../lib/encryption.js";
 import serverless from "serverless-http";
 
 const app = express();
 const router = Router();
+app.use(express.json());
 
-app.use(
-  express.json({
-    // store the raw request body to use it for signature verification
-    verify: (req, res, buf, encoding) => {
-      req.rawBody = buf?.toString(encoding || ("utf8" as any));
-    },
-  })
-);
-
-const { APP_SECRET, PRIVATE_KEY, PASSPHRASE = "", PORT = "3000" } = process.env;
-
-/*
-Example:
-```-----[REPLACE THIS] BEGIN RSA PRIVATE KEY-----
-MIIE...
-...
-...AQAB
------[REPLACE THIS] END RSA PRIVATE KEY-----```
-*/
+const { APP_SECRET, PRIVATE_KEY, PASSPHRASE = "" } = process.env;
 
 router.post("/", async (req, res) => {
-  if (!PRIVATE_KEY) {
-    throw new Error(
-      'Private key is empty. Please check your env variable "PRIVATE_KEY".'
-    );
-  }
+  const { decryptedBody, aesKeyBuffer, initialVectorBuffer } = decryptRequest(
+    req.body,
+    PRIVATE_KEY as string
+  );
 
-  if (!isRequestSignatureValid(req)) {
-    // Return status code 432 if request signature does not match.
-    // To learn more about return error codes visit: https://developers.facebook.com/docs/whatsapp/flows/reference/error-codes#endpoint_error_codes
-    return res.status(432).send();
-  }
+  const { screen, data, version, action } = decryptedBody;
+  console.warn("{ screen, data, version, action }", {
+    screen,
+    data,
+    version,
+    action,
+  });
+  // Return the next screen & data to the client
+  const screenData = {
+    screen: "SCREEN_NAME",
+    data: {
+      some_key: "some_value",
+    },
+  };
 
-  let decryptedRequest = null;
-  try {
-    decryptedRequest = decryptRequest(req.body, PRIVATE_KEY, PASSPHRASE);
-  } catch (err) {
-    console.error(err);
-    if (err instanceof FlowEndpointException) {
-      return res.status(err.statusCode).send();
-    }
-    return res.status(500).send();
-  }
-
-  const { aesKeyBuffer, initialVectorBuffer, decryptedBody } = decryptedRequest;
-  console.log("💬 Decrypted Request:", decryptedBody);
-
-  // TODO: Uncomment this block and add your flow token validation logic.
-  // If the flow token becomes invalid, return HTTP code 427 to disable the flow and show the message in `error_msg` to the user
-  // Refer to the docs for details https://developers.facebook.com/docs/whatsapp/flows/reference/error-codes#endpoint_error_codes
-
-  /*
-  if (!isValidFlowToken(decryptedBody.flow_token)) {
-    const error_response = {
-      error_msg: `The message is no longer available`,
-    };
-    return res
-      .status(427)
-      .send(
-        encryptResponse(error_response, aesKeyBuffer, initialVectorBuffer)
-      );
-  }
-  */
-
-  const screenResponse = await getNextScreen(decryptedBody);
-  console.log("👉 Response to Encrypt:", screenResponse);
-
-  res.send(encryptResponse(screenResponse, aesKeyBuffer, initialVectorBuffer));
+  // Return the response as plaintext
+  res.send(encryptResponse(screenData, aesKeyBuffer, initialVectorBuffer));
 });
 
 router.get("/", (req, res) => {
   res.send(`<pre>Nothing to see here.
 Checkout README.md to start.</pre>`);
 });
-
-function isRequestSignatureValid(req: Request) {
-  if (!APP_SECRET) {
-    console.warn(
-      "App Secret is not set up. Please Add your app secret in /.env file to check for request validation"
-    );
-    return true;
-  }
-
-  const signatureHeader = req.get("x-hub-signature-256") as string;
-  const signatureBuffer = Buffer.from(
-    signatureHeader.replace("sha256=", ""),
-    "utf-8"
-  );
-
-  const hmac = crypto.createHmac("sha256", APP_SECRET);
-  const digestString = hmac.update(req.rawBody).digest("hex");
-  const digestBuffer = Buffer.from(digestString, "utf-8");
-
-  if (!crypto.timingSafeEqual(digestBuffer, signatureBuffer)) {
-    console.error("Error: Request Signature did not match");
-    return false;
-  }
-  return true;
-}
 
 app.use("/api/", router);
 
