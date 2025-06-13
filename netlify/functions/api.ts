@@ -14,6 +14,22 @@ app.use(
   })
 );
 
+app.use((req, res, next) => {
+  console.log("incoming request", req.method, req.path);
+  let data = "";
+  req.on("data", (chunk) => {
+    data += chunk;
+  });
+  req.on("end", () => {
+    try {
+      req.body = JSON.parse(data); // Manually parse to JSON
+    } catch (e) {
+      req.body = data; // fallback
+    }
+    next();
+  });
+});
+
 const PRIVATE_KEY_BASE_64 = process.env.PRIVATE_KEY as string;
 const PRIVATE_KEY = Buffer.from(PRIVATE_KEY_BASE_64, "base64").toString(
   "ascii"
