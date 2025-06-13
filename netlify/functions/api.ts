@@ -6,12 +6,14 @@ const app = express();
 const router = Router();
 app.use(express.json());
 
-const { APP_SECRET, PRIVATE_KEY, PASSPHRASE = "" } = process.env;
+const PRIVATE_KEY = (process.env.PRIVATE_KEY as string)
+  ?.split(String.raw`\n`)
+  ?.join("\n");
 
 router.post("/", async (req, res) => {
   const { decryptedBody, aesKeyBuffer, initialVectorBuffer } = decryptRequest(
     req.body,
-    PRIVATE_KEY as string
+    PRIVATE_KEY
   );
 
   const { screen, data, version, action } = decryptedBody;
