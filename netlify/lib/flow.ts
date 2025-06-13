@@ -7,7 +7,7 @@
 
 export const getNextScreen = async (decryptedBody: {
   screen: string;
-  data: { error: any; name: string };
+  data: any;
   version: string;
   action: string;
   flow_token: string;

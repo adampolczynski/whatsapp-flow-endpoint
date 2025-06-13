@@ -15,12 +15,6 @@ export const decryptRequest = (body: any, privatePem: string) => {
     passphrase: process.env.PASSPHRASE,
   });
 
-  console.log(process.env.PASSPHRASE, privatePem, {
-    encrypted_aes_key,
-    encrypted_flow_data,
-    initial_vector,
-  });
-
   let decryptedAesKey = null;
   try {
     // decrypt AES key created by client

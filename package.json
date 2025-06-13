@@ -5,6 +5,7 @@
   "license": "MIT",
   "dependencies": {
     "@netlify/functions": "^4.1.0",
+    "axios": "^1.9.0",
     "crypto": "^1.0.1",
     "dotenv": "^16.5.0",
     "express": "^5.1.0",
